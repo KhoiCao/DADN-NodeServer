@@ -2,25 +2,25 @@ var mqtt = require('mqtt');
 var firebase = require('firebase');
 var cron = require('cron');
 
-// const firebaseConfig = {
-//   apiKey: 'AIzaSyADawFZYkBiSUoh5bdWpescXF0V2DvDvvk',
-//   authDomain: 'lightappdemo-dc252.firebaseapp.com',
-//   databaseURL: 'https://lightappdemo-dc252.firebaseio.com',
-//   projectId: 'lightappdemo-dc252',
-//   storageBucket: 'lightappdemo-dc252.appspot.com',
-//   messagingSenderId: '670980151251',
-//   appId: '1:670980151251:web:245ac428bec24de86a0126',
-// };
-
 const firebaseConfig = {
-  apiKey: "AIzaSyC7Uz_Eh4UV3xNNWsK5zVtsBsKi6tILI4A",
-  authDomain: "dadn-db-27210.firebaseapp.com",
-  databaseURL: "https://dadn-db-27210.firebaseio.com",
-  projectId: "dadn-db-27210",
-  storageBucket: "dadn-db-27210.appspot.com",
-  messagingSenderId: "1025118247898",
-  appId: "1:1025118247898:web:02930c9ce787a0327e7ee3"
+  apiKey: 'AIzaSyADawFZYkBiSUoh5bdWpescXF0V2DvDvvk',
+  authDomain: 'lightappdemo-dc252.firebaseapp.com',
+  databaseURL: 'https://lightappdemo-dc252.firebaseio.com',
+  projectId: 'lightappdemo-dc252',
+  storageBucket: 'lightappdemo-dc252.appspot.com',
+  messagingSenderId: '670980151251',
+  appId: '1:670980151251:web:245ac428bec24de86a0126',
 };
+
+// const firebaseConfig = {
+//   apiKey: "AIzaSyC7Uz_Eh4UV3xNNWsK5zVtsBsKi6tILI4A",
+//   authDomain: "dadn-db-27210.firebaseapp.com",
+//   databaseURL: "https://dadn-db-27210.firebaseio.com",
+//   projectId: "dadn-db-27210",
+//   storageBucket: "dadn-db-27210.appspot.com",
+//   messagingSenderId: "1025118247898",
+//   appId: "1:1025118247898:web:02930c9ce787a0327e7ee3"
+// };
 
 var app = firebase.initializeApp(firebaseConfig);
 
@@ -45,6 +45,18 @@ client.on("message",function(topic,message,packet){
 	updateDBAndPublish(message);
 });
 
+
+function testNextID(){
+	firebase
+	.database()
+	.ref('nextID')
+	.once('value')
+	.then((snapshot)=>{
+		console.log(snapshot.val());
+	});
+}
+testNextID();
+
 let timingObj;
 let timingList = [];
 let timerJobList = [];
@@ -52,6 +64,8 @@ let deviceList = [];
 let deviceListObj;
 let indexInRoom = [];
 let controlList = [];
+
+
 
 function readRoomData () {
 	firebase
@@ -69,6 +83,7 @@ function readTimingData(){
 		.ref('timingList')
 		.on('value', (snapshot) =>{
 			// timingObj = snapshot.val();
+			// console.log(snapshot.val());
 			stopAllJob();
 			createTimer(snapshot.val());
 		});
@@ -118,6 +133,7 @@ function createTimer(timingObj){
 		timingInRoom = timingObj[i].map((timing) => ({...timing, room: i}));
 		timingList = timingList.concat(timingInRoom);
 	}
+	console.log(timingList);
 	// console.log(timingList.length);
 	createJob(timingList);
 }
@@ -147,7 +163,7 @@ function createJob(timingList){
 			if(days[day]) setDays += `${convertDayToNum(day)},`;
 		}
 		setDays = setDays.slice(0,setDays.length - 1);
-		// console.log(setDays);
+		console.log(setDays);
 		let messageObj = {device_id: deviceId.toString(), values:[(action? "0" : "1"),"255"]};
 		let message = [];
 		message.push(messageObj);
@@ -230,7 +246,7 @@ function writeToLog(deviceName, deviceId, room, time, action, autoControlled, nu
   	let mm = today.getMonth() + 1;
   	let yyyy = today.getFullYear();
   	let formattedDate = dd + '-' + mm + '-' + yyyy;
-
+  	// console.log(formattedDate);
  	firebase
     .database()
     .ref('logList/' + formattedDate)
@@ -310,18 +326,37 @@ function updateDBAndPublish(JSONmessage){
   	let formattedDate = dd + '-' + mm + '-' + yyyy;
 	firebase
 	.database()
-	.ref('logList' + formattedDate)
+	.ref('logList/' + formattedDate)
 	.once('value')
-	.then((snapshot)=>{
+	.then(function(snapshot){
 		let numChildCount = snapshot.numChildren();
 		for (let i = 0; i < messageTo.length ; i++){
 			let id = messageTo[i].device_id;
 			let action = +messageTo[i].values[0];
 			let device = deviceList[id - 1];
-			writeToLog(device.deviceName, device.deviceID, device.room, time, !action, true, numChildCount + i);
+			let written = writeToLog(device.deviceName, device.deviceID, device.room, time, !action, true, numChildCount + i);
 		}
 	})
+	// addToLog(formattedDate, messageTo, time);
 }
+
+// function addToLog(date, messageTo, time){
+// 	firebase
+// 	.database()
+// 	.ref('logList' + date)
+// 	.once('value')
+// 	.then((snapshot)=>{
+// 		// let numChildCount = snapshot.numChildren();
+// 		// console.log(formattedDate);
+// 		console.log(snapshot.numChildren());
+// 		for (let i = 0; i < messageTo.length ; i++){
+// 			let id = messageTo[i].device_id;
+// 			let action = +messageTo[i].values[0];
+// 			let device = deviceList[id - 1];
+// 			writeToLog(device.deviceName, device.deviceID, device.room, time, !action, true, snapshot.numChildren() + i);
+// 		}
+// 	})
+// }
 
 
 
